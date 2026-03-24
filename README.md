@@ -90,6 +90,24 @@ A primary challenge was the **"Intraday Fee Trap."**
 
 ---
 
+### 8. AI Usage Disclosure
+In alignment with the firm's AI usage policy, I utilized AI assistants (ChatGPT, GitHub Copilot) during this project. 
+
+**AI as the "Worker":**
+*   Assisted with boilerplate `pandas` syntax (e.g., datetime parsing and resampling methods).
+*   Helped debug matrix alignment errors during the OLS regression and vectorized operations.
+*   Generated the formatting code for the `matplotlib` visualizations.
+
+**My Role as the "Architect":**
+*   The statistical pipeline (ADF & ARIMA tests) to empirically prove the market regime.
+*   The strategic pivot from Mean Reversion to a 15-minute Time-Series Momentum model.
+*   The risk management rules (Long-Only, EMA trailing stops).
+*   The diagnosis and resolution of the "Intraday Fee Trap" (shifting to a swing-holding period to allow the alpha to clear the 0.01% transaction cost hurdle). 
+
+All mathematical reasoning, architecture decisions, and strategy evaluations are entirely my own.
+
+---
+
 ### How to Run
 
 1. Install dependencies: `pip install -r requirements.txt`
