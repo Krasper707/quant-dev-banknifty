@@ -1,10 +1,3 @@
-This is a strong collection of insights, but for a professional submission, it needs to be structured as a **Quantitative Research Report** rather than a chronological diary.
-
-The hiring manager wants to see a logical flow: **Data → Statistics → Strategy Design → Risk/Cost Analysis → Performance.**
-
-Here is the refactored version, formatted as a professional `README.md`.
-
----
 
 # Quantitative Strategy Report: BankNifty Momentum
 
