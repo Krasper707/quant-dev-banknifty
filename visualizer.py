@@ -12,7 +12,7 @@ def save_performance_plots(df, folder='results'):
 
     # --- PLOT 1: Price and EMAs (Close-up of last 1000 bars) ---
     plt.figure(figsize=(15, 7))
-    subset = df.tail(1000) # Last ~2 months of trading
+    subset = df.tail(100000) 
     plt.plot(subset.index, subset['Close'], label='BankNifty Price', color='black', alpha=0.3)
     plt.plot(subset.index, subset['fast_ema'], label='50 EMA (Fast)', color='blue', linewidth=1.5)
     plt.plot(subset.index, subset['slow_ema'], label='200 EMA (Slow)', color='red', linewidth=1.5)

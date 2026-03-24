@@ -89,28 +89,49 @@ class MomentumStrategy:
     #     df['position'] = df['signal']        
         
     #     return df
+    # def generate_signals(self, df):
+    #     # 1. EMAs
+    #     df['fast_ema'] = df['Close'].ewm(span=10, adjust=False).mean()
+    #     df['slow_ema'] = df['Close'].ewm(span=30, adjust=False).mean()
+        
+    #     # Robust Volatility Filter 
+    #     df['volatility'] = df['Close'].pct_change().rolling(20).std()
+    #     # Calculate the median volatility over the last few days to set a baseline
+    #     vol_threshold = df['volatility'].rolling(200).median()
+        
+    #     # Entry Logic
+    #     df['signal'] = 0
+        
+    #     # Condition: EMAs cross AND volatility is above the median (market is active)
+    #     df.loc[(df['fast_ema'] > df['slow_ema']) & (df['volatility'] > vol_threshold), 'signal'] = 1
+    #     df.loc[(df['fast_ema'] < df['slow_ema']) & (df['volatility'] > vol_threshold), 'signal'] = -1
+        
+    #     # Persistence & Exit
+    #     df['position'] = df['signal'].replace(0, np.nan).ffill().fillna(0)
+        
+    #     # Exit if the trend reverses (Standard crossover exit)
+    #     df.loc[(df['position'] == 1) & (df['fast_ema'] < df['slow_ema']), 'position'] = 0
+    #     df.loc[(df['position'] == -1) & (df['fast_ema'] > df['slow_ema']), 'position'] = 0
+        
+    #     return df
     def generate_signals(self, df):
         # 1. EMAs
         df['fast_ema'] = df['Close'].ewm(span=10, adjust=False).mean()
         df['slow_ema'] = df['Close'].ewm(span=30, adjust=False).mean()
         
-        # Robust Volatility Filter 
-        df['volatility'] = df['Close'].pct_change().rolling(20).std()
-        # Calculate the median volatility over the last few days to set a baseline
-        vol_threshold = df['volatility'].rolling(200).median()
-        
-        # Entry Logic
+        # 2. Entry Logic (THE FIX IS HERE)
         df['signal'] = 0
+        df.loc[df['fast_ema'] > df['slow_ema'], 'signal'] = 1
         
-        # Condition: EMAs cross AND volatility is above the median (market is active)
-        df.loc[(df['fast_ema'] > df['slow_ema']) & (df['volatility'] > vol_threshold), 'signal'] = 1
-        df.loc[(df['fast_ema'] < df['slow_ema']) & (df['volatility'] > vol_threshold), 'signal'] = -1
+        # When trend reverses, go to CASH (0) instead of SHORT (-1)
+        df.loc[df['fast_ema'] < df['slow_ema'], 'signal'] = 0 
         
-        # Persistence & Exit
+        # 3. Position Persistence
         df['position'] = df['signal'].replace(0, np.nan).ffill().fillna(0)
         
-        # Exit if the trend reverses (Standard crossover exit)
+        # 4. Exit if the trend reverses
         df.loc[(df['position'] == 1) & (df['fast_ema'] < df['slow_ema']), 'position'] = 0
-        df.loc[(df['position'] == -1) & (df['fast_ema'] > df['slow_ema']), 'position'] = 0
         
         return df
+
+

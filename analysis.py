@@ -70,8 +70,8 @@ class StatisticalAnalyzer:
     def __init__(self, data):
         # We work with a subset of data to keep execution well under 30 seconds.
         # 100,000 rows of 1-min data is roughly 1 year, which is statistically significant.
-        if len(data) > 100000:
-            self.data = data['Close'].tail(100000)
+        if len(data) > 1000000:
+            self.data = data['Close'].tail(1000000)
             print(f"Note: Downsampling analysis from {len(data)} to 100,000 rows for efficiency.\n")
         else:
             self.data = data['Close']

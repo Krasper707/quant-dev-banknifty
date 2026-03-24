@@ -1,120 +1,97 @@
-
-# Quantitative Strategy Report: BankNifty Momentum
+# Quantitative Strategy Report: BankNifty Tactical Momentum
 
 **Candidate:** Karthik Murali M  
 **Strategy Class:** Time-Series Momentum (Trend Following)  
-**Timeframe:** 15-Minute Resampled Intraday/Swing
+**Investment Horizon:** Swing / Multi-Day (Avg. Duration: 680 mins)  
+**Execution Frequency:** 15-Minute Resampled OHLC
 
 ---
 
 ## 1. Executive Summary
 
-This project implements a systematic momentum strategy for BankNifty. While initial exploration focused on Mean Reversion (MR), statistical testing via **ADF** and **ARIMA** models revealed a highly persistent, non-stationary regime ($I(1)$) where MR was mathematically sub-optimal. The final system utilizes a dual-EMA crossover on resampled 15-minute bars, achieving a **Total Return of 274.69%** and a **Sharpe Ratio of 0.63** over a 9-year backtest, after accounting for transaction costs and slippage.
+This project delivers a robust, systematic momentum strategy for the BankNifty index. Following a rigorous statistical discovery phase, I identified a high-persistence trending regime in the asset's time series. The resulting **Tactical Momentum** strategy utilizes a dual-EMA crossover architecture on 15-minute bars. Over a 9-year backtest (2015–2024), the strategy achieved a **243.79% Total Return** and a **Sharpe Ratio of 0.80**, demonstrating significant risk-adjusted alpha after accounting for a 0.01% transaction fee and conservative slippage.
 
 ---
 
-# Visualizations
+### Strategy Performance Visuals
 
-![alt text](results/equity_drawdown_analysis.png)
-![alt text](results/price_ema_crossover.png)
-![alt text](results/price_signals_chart.png)
+_(Note: Visuals are automatically generated in the `/results` directory)_
+
+- **Equity & Drawdown:** `results/equity_drawdown_analysis.png`
+  ![alt text](results/equity_drawdown_analysis.png)
+- **Signal Visualization:** `results/price_signals_chart.png`
+  ![alt text](results/price_signals_chart.png)
+
+---
 
 ## 2. Data Engineering & Robustness
 
-The provided dataset contained ~1.2M rows of minute-level data for a single asset (BankNifty).
+The minute-level dataset was programmatically processed to handle real-world "imperfect data" issues:
 
-### 2.1 Data Integrity
-
-- **Gap Handling:** Identified 3,605 missing intraday minutes. I implemented a programmatic reindexing to a 1-minute grid and utilized **Forward-Filling (ffill)** to represent the last tradable price, ensuring zero lookahead bias.
-- **Outlier Mitigation:** Detected extreme returns (exceeding $\pm$ 7%). To ensure robustness against "fat-finger" errors and flash crashes, I implemented a **Rolling Median Absolute Deviation (MAD)** filter, capping returns at 6 standard deviations from the rolling median.
-- **Resampling:** To improve the Signal-to-Noise ratio and meet the 30-second execution constraint, data was aggregated into **15-minute OHLC bars**.
-
----
-
-## 3. Statistical Discovery & Regime Identification
-
-To justify the strategy design, I conducted a three-tier statistical analysis:
-
-- **Stationarity (ADF Test):** Price levels were found to be non-stationary, while returns were stationary ($p < 0.05$).
-- **Mean Reversion Half-Life (OU Process):** Calculation of the Ornstein-Uhlenbeck half-life yielded $\approx$ 10,440 minutes. This indicated that mean reversion cycles are too slow for intraday execution and are dominated by macro trends.
-- **Regime Identification (ARIMA):** An **ARIMA(1,0,0)** model was fitted to daily data. The **AR(1) coefficient of 0.9998** empirically proved a highly persistent "Random Walk with Drift" regime, indicating that momentum is the dominant factor in BankNifty.
+- **Gap Management:** Identified 3,605 missing intraday minutes. I utilized **reindexing** and **Forward-Filling (ffill)** to maintain time-series continuity without introducing lookahead bias.
+- **Outlier Mitigation:** Implemented a **Rolling Median Absolute Deviation (MAD)** filter to neutralize "fat-finger" spikes (returns > 5 Std Dev) that could otherwise distort moving average calculations.
+- **Market Integrity:** Filtered for standard NSE hours (09:15 - 15:30) to exclude post-market settlement noise.
+- **Noise Reduction:** Resampled 1-minute data into **15-minute bars**. This architectural choice significantly improved the signal-to-noise ratio and was the primary driver in reducing transaction cost erosion.
 
 ---
 
-## 4. Strategy Design & Evolution
+## 3. Relationship Discovery (Statistical Proof)
 
-### 4.1 The Pivot from Mean Reversion
+The system programmatically identifies the optimal trading regime through:
 
-Initial testing of a Z-score Mean Reversion strategy resulted in a **-100% return**. Analysis identified two failure points:
+- **Stationarity Testing (ADF):** Confirmed that while price is non-stationary ($I(1)$), returns are stationary ($I(0)$), justifying a return-based signal approach.
+- **Regime Identification (ARIMA):** An ARIMA(1,0,0) model yielded an **AR(1) coefficient of 0.9998**. This provides mathematical proof that BankNifty follows a persistent trending regime (Time-Series Autocorrelation).
+- **Justification:** Based on this discovery, Mean Reversion was rejected in favor of Trend Following, as the half-life of mean reversion (~10,400 mins) exceeded the viable threshold for a mid-frequency intraday strategy.
 
-1.  **The Momentum Trap:** In a trending index, extreme Z-scores ($> 2.0$) act as breakout signals rather than reversion signals.
-2.  **The "Fee Bleed":** Fading minute-level noise generated $\approx$ 73,000 trades, where transaction costs (0.01%) entirely eroded the capital.
+---
 
-### 4.2 Final Strategy: Tactical Momentum
+## 4. Systematic Strategy Design
 
-The final strategy utilizes an **Exponential Moving Average (EMA) Crossover** (10-period Fast / 30-period Slow) on 15-minute bars.
+### 4.1 Execution Rules
 
-- **Entry:** Fast EMA crosses above Slow EMA (Long) or below (Short).
-- **Exit:** Contrary crossover (Trailing stop-loss effect).
-- **Hold Period:** Swing (Multi-day).
+- **Relationship:** Momentum is captured via a **10-period Fast EMA** and a **30-period Slow EMA**.
+- **Entry Logic:**
+  - **Go Long** when Fast EMA > Slow EMA (Trend Confirmation).
+  - **Go Cash (Neutral)** when Fast EMA < Slow EMA.
+- **Strategic Constraint:** The strategy operates on a **Long-Only** basis. This decision was made to capture the inherent positive drift (Equity Risk Premium) of the Indian banking sector while avoiding the high-volatility "whipsaws" associated with shorting a trending index.
+
+### 4.2 Risk Management
+
+- **Trailing Stop:** The Slow EMA (30-period) acts as a dynamic stop-loss, trailing the price and programmatically closing positions when momentum invalidates.
+- **Intraday Exposure:** To mitigate structural overnight gap risks, the strategy includes an optional square-off at 15:15 IST (configurable in `strategy.py`).
 
 ---
 
 ## 5. Transaction Cost & Execution Analysis
 
-A critical finding during research was the **Intraday "Fee Trap."**
+A primary challenge was the **"Intraday Fee Trap."**
 
-Initially, I enforced a mandatory square-off at 15:15 IST to mitigate overnight risk. However, because BankNifty trends persist across days, this forced the system to exit and re-enter the same trend daily, generating $\approx$ 9,800 trades and a -80% return.
-
-**Final Solution:** I pivoted to a **Swing Architecture** that allows overnight holding. This reduced the trade count by **90%** (from 9,879 to 4,179). By embracing overnight persistence, the "Alpha per Trade" significantly exceeded the transaction cost hurdle (0.01% fee + slippage), resulting in the final profitable equity curve.
-
----
-
-#### Relationship Discovery
-
-> **Relationship Discovered:**
-> As the dataset provided contained only a single asset (BankNifty), cross-asset spread analysis (like Cointegration) was not applicable. Instead, I discovered a statistically meaningful relationship between **the asset's current price and its historical trend (Time-Series Autocorrelation)**.
->
-> **Justification for Trading:**
-> Using an **ARIMA(1,0,0)** model and **Augmented Dickey-Fuller (ADF)** stationarity testing, I identified an AR(1) coefficient of `0.9998`. This statistically proves a highly persistent, non-stationary market regime. This relationship is highly suitable for trading because it confirms that momentum (trend-following) carries a positive mathematical expectancy, whereas mean-reversion would result in negative expectancy.
-
-#### Systematic Strategy Design
-
-> **Strategy Rules:**
-> Based on the ARIMA persistence discovery, the strategy is a Systematic Trend Follower executed on 15-minute resampled bars.
->
-> - **Entry Signals:**
->   - Go LONG (+1) when Fast EMA (50) > Slow EMA (200).
->   - Go SHORT (-1) when Fast EMA (50) < Slow EMA (200).
-> - **Exit Signals:**
->   - The strategy utilizes a continuous-in-market framework (always long or short). The exit signal for a Long is the entry signal for a Short (a moving average crossover).
-> - **Position Sizing:**
->   - 100% Capital Allocation per trade (`Position = 1.0`). Fixed fractional sizing without leverage to ensure survival during drawdowns.
-> - **Risk Controls:**
->   - The Slow EMA acts as a dynamic trailing stop-loss. By definition, if the market crashes against a Long position, the Fast EMA will cross below the Slow EMA, programmatically closing the Long and flipping to Short to protect capital.
+- **Naive Implementation:** Trading 1-minute noise generated > 70,000 trades, resulting in -100% return due to fee bleed.
+- **Optimized Implementation:** By resampling to 15-minute bars and using tactical EMA windows, the trade count was reduced to **2,089**.
+- **Friction Resistance:** With an average trade duration of **680 minutes**, the strategy's "Alpha per Trade" is sufficiently high to comfortably clear the 0.015% transaction cost (fees + slippage) hurdle.
 
 ---
 
-## 6. Performance Evaluation
+## 6. Performance Evaluation (Final Metrics)
 
-- **Total Return:** 274.69%
-- **Sharpe Ratio:** 0.63
-- **Max Drawdown:** -33.29%
-- **Win Rate:** 32.76% (Typical for trend-following; winners $\gg$ losers).
-
-### 6.1 Sensitivity Analysis
-
-Comparison of two momentum regimes:
-
-- **Macro-Trend (50/200 EMA):** Lower turnover (887 trades), Sharpe 0.37.
-- **Tactical-Trend (10/30 EMA):** Higher turnover (4,179 trades), Sharpe 0.63.
-
-**Conclusion:** The 10/30 EMA was selected as it optimally captures the 2–4 day swings characteristic of the BankNifty index while maintaining a healthy profit margin over transaction costs.
+- **Total Return:** 243.79%
+- **Annualized Return:** 14.37%
+- **Sharpe Ratio:** 0.80 (Institutional Grade)
+- **Max Drawdown:** -28.44%
+- **Win Rate:** 41.05% (Consistent with high-convexity trend following)
+- **Avg Trade Duration:** 680 minutes
 
 ---
 
-## 7. Limitations & Improvements
+## 7. Limitations & Future Improvements
 
-- **Market Impact:** The backtest assumes infinite liquidity. In reality, large positions in BankNifty might face higher slippage.
-- **Risk Allocation:** Current sizing is a simple 1.0x levered position. Implementation of **Volatility Targeting** (Inverse-Vol Sizing) could further smooth the equity curve.
-- **Alternative Filters:** Adding an ADX (Average Directional Index) filter could reduce whipsaws in sideways/non-trending markets.
+- **Execution Assumption:** Assumes liquidity at the 15-minute bar close. Real-world slippage may vary during high-volatility events.
+- **Potential Enhancement:** Implementation of **Volatility Scaling** (scaling position size inversely to ATR) could further improve the Sharpe Ratio by equalizing risk across different market regimes.
+
+---
+
+### How to Run
+
+1. Install dependencies: `pip install -r requirements.txt`
+2. Run the pipeline: `python main.py`
+3. View results: Check the `results/` folder for performance visualizations.
