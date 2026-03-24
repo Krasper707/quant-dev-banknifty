@@ -20,6 +20,12 @@ This project implements a systematic momentum strategy for BankNifty. While init
 
 ---
 
+# Visualizations
+
+![alt text](results/equity_drawdown_analysis.png)
+![alt text](results/price_ema_crossover.png)
+![alt text](results/price_signals_chart.png)
+
 ## 2. Data Engineering & Robustness
 
 The provided dataset contained ~1.2M rows of minute-level data for a single asset (BankNifty).
